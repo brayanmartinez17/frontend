@@ -1,0 +1,282 @@
+import React, {useState, useEffect}from 'react';
+import './App.css';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import {Modal, ModalBody, ModalFooter, ModalHeader} from 'reactstrap';
+import axios from 'axios';
+
+function App() {
+  const baseUrl="https://localhost:44366/api/usuarioEmpresa";
+  const [data, setData]=useState([]);
+  const [modalEditar, setModalEditar]=useState(false);
+  const [modalInsertar, setModalInsertar]=useState(false);
+  const [modalEliminar, setModalEliminar]=useState(false);
+  const [gestorSeleccionado, setGestorSeleccionado]=useState({
+    id_usuario_empresa: '',
+    perfil: '',
+    nit: '',
+    razonsocial: '',
+    direccion:'',
+    correoelectronico:'',
+    telefono:'',
+    Fax:'',
+    password:''
+  })
+
+  const handleChange=e=>{
+    const {name, value}=e.target;
+    setGestorSeleccionado({
+      ...gestorSeleccionado,
+      [name]: value
+    });
+    console.log(gestorSeleccionado);
+  }
+
+  const abrirCerrarModalInsertar=()=>{
+    setModalInsertar(!modalInsertar);
+  }
+
+  const abrirCerrarModalEditar=()=>{
+    setModalEditar(!modalEditar);
+  }
+
+   const abrirCerrarModalEliminar=()=>{
+    setModalEliminar(!modalEliminar);
+  }
+
+  const peticionGet=async()=>{
+    await axios.get(baseUrl)
+    .then(response=>{
+      setData(response.data);
+    }).catch(error=>{
+      console.log(error);
+    })
+  }
+
+  const peticionPost=async()=>{
+    delete gestorSeleccionado.id_usuario_empresa;
+    gestorSeleccionado.nit=parseInt(gestorSeleccionado.nit);
+    gestorSeleccionado.razonsocial=parseInt(gestorSeleccionado.razonsocial);
+    gestorSeleccionado.telefono=parseInt(gestorSeleccionado.telefono);
+    await axios.post(baseUrl, gestorSeleccionado)
+    .then(response=>{
+      setData(data.concat(response.data));
+      abrirCerrarModalInsertar();
+    }).catch(error=>{
+      console.log(error);
+    })
+  }
+
+  const peticionPut=async()=>{
+    gestorSeleccionado.nit=parseInt(gestorSeleccionado.nit);
+    gestorSeleccionado.razonsocial=parseInt(gestorSeleccionado.razonsocial);
+    gestorSeleccionado.telefono=parseInt(gestorSeleccionado.telefono);
+    await axios.put(baseUrl+"/"+gestorSeleccionado.id_usuario_empresa, gestorSeleccionado)
+    .then(response=>{
+      var respuesta=response.data;
+      var dataAuxiliar=data;
+      dataAuxiliar.map(usuarioEmpresa=>{
+        if(usuarioEmpresa.id_usuario_empresa===gestorSeleccionado.id_usuario_empresa){
+          usuarioEmpresa.perfil=respuesta.perfil;
+          usuarioEmpresa.nit=respuesta.nit;
+          usuarioEmpresa.razonsocial=respuesta.razonsocial;
+          usuarioEmpresa.direccion=respuesta.direccion;
+          usuarioEmpresa.correoelectronico=respuesta.correoelectronico;
+          usuarioEmpresa.telefono=respuesta.telefono;
+          usuarioEmpresa.Fax=respuesta.Fax;
+          usuarioEmpresa.password=respuesta.password;
+    
+        }
+      });
+      abrirCerrarModalEditar();
+    }).catch(error=>{
+      console.log(error);
+    })
+  }
+
+  const peticionDelete=async()=>{
+    await axios.delete(baseUrl+"/"+gestorSeleccionado.id_usuario_empresa)
+    .then(response=>{
+     setData(data.filter(usuarioEmpresa=>usuarioEmpresa.id_usuario_empresa!==response.data));
+      abrirCerrarModalEliminar();
+    }).catch(error=>{
+      console.log(error);
+    })
+  }
+
+  const seleccionarGestor=(usuarioEmpresa, caso)=>{
+    setGestorSeleccionado(usuarioEmpresa);
+    (caso==="Editar")?
+    abrirCerrarModalEditar(): abrirCerrarModalEliminar();
+  }
+
+  useEffect(()=>{
+    peticionGet();
+  },[])
+
+  return (
+    <div className="App">
+      <br/><br/>
+      <button onClick={()=>abrirCerrarModalInsertar()} className="btn btn-success">Insertar Nuevo Gestor</button>
+      <br/><br/>
+      <table className="table table-bordered">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>perfil</th>
+            <th>nit</th>
+            <th>razonsocial</th>
+            <th>direccion</th>
+            <th>correoelectronico</th>
+            <th>telefono</th>
+            <th>Fax</th>
+            <th>password</th>
+          </tr>
+        </thead>
+        <tbody>
+        {data.map(usuarioEmpresa=>(
+          <tr key={usuarioEmpresa.id_usuario_empresa}>
+            <td>{usuarioEmpresa.id_usuario_empresa}</td>
+            <td>{usuarioEmpresa.perfil}</td>
+            <td>{usuarioEmpresa.nit}</td>
+            <td>{usuarioEmpresa.razonsocial}</td>
+            <td>{usuarioEmpresa.direccion}</td>
+            <td>{usuarioEmpresa.correoelectronico}</td>
+            <td>{usuarioEmpresa.telefono}</td>
+            <td>{usuarioEmpresa.Fax}</td>
+            <td>{usuarioEmpresa.password}</td>
+            <td>
+              <button className="btn btn-primary" onClick={()=>seleccionarGestor(usuarioEmpresa, "Editar")}>Editar</button> {"  "}
+              <button className="btn btn-danger" onClick={()=>seleccionarGestor(usuarioEmpresa, "Eliminar")}>Eliminar</button>
+            </td>
+            </tr>
+        ))}
+        </tbody>
+
+      </table>
+
+      <Modal isOpen={modalInsertar}>
+      <ModalHeader>Insertar Gestor de Base de Datos</ModalHeader>
+      <ModalBody>
+        <div className="form-group">
+          <label>perfil: </label>
+          <br />
+          <input type="text" className="form-control" name="perfil"  onChange={handleChange}/>
+          <br />
+          <label>nit: </label>
+          <br />
+          <input type="text" className="form-control" name="nit" onChange={handleChange}/>
+          <br />
+
+          <label>razonsocial: </label>
+          <br />
+          <input type="text" className="form-control" name="razonsocial" onChange={handleChange}/>
+          <br />
+
+          <label>direccion: </label>
+          <br />
+          <input type="text" className="form-control" name="direccion" onChange={handleChange}/>
+          <br />
+
+          <label>correoelectronico: </label>
+          <br />
+          <input type="text" className="form-control" name="correoelectronico" onChange={handleChange}/>
+          <br />
+
+          <label>telefono: </label>
+          <br />
+          <input type="text" className="form-control" name="telefono" onChange={handleChange}/>
+          <br />
+
+          <label>Fax: </label>
+          <br />
+          <input type="text" className="form-control" name="Fax" onChange={handleChange}/>
+          <br />
+
+          <label>password: </label>
+          <br />
+          <input type="text" className="form-control" name="password" onChange={handleChange}/>
+          <br />
+        </div>
+      </ModalBody>
+      <ModalFooter>
+        <button className="btn btn-primary" onClick={()=>peticionPost()}>Insertar</button>{"   "}
+        <button className="btn btn-danger" onClick={()=>abrirCerrarModalInsertar()}>Cancelar</button>
+      </ModalFooter>
+    </Modal>
+
+    <Modal isOpen={modalEditar}>
+      <ModalHeader>Editar Gestor de Base de Datos</ModalHeader>
+      <ModalBody>
+        <div className="form-group">
+        <label>ID: </label>
+          <br />
+          <input type="text" className="form-control" readOnly value={gestorSeleccionado && gestorSeleccionado.id_usuario_empresa}/>
+          <br />
+          <label>perfil: </label>
+          <br />
+          <input type="text" className="form-control" name="perfil" onChange={handleChange} value={gestorSeleccionado && gestorSeleccionado.perfil}/>
+          <br />
+          <label>nit: </label>
+          <br />
+          <input type="text" className="form-control" name="nit" onChange={handleChange} value={gestorSeleccionado && gestorSeleccionado.nit}/>
+          <br />
+
+          <label>razonsocial: </label>
+          <br />
+          <input type="text" className="form-control" name="razonsocial" onChange={handleChange} value={gestorSeleccionado && gestorSeleccionado.razonsocial}/>
+          <br />
+
+          <label>direccion: </label>
+          <br />
+          <input type="text" className="form-control" name="direccion" onChange={handleChange} value={gestorSeleccionado && gestorSeleccionado.direccion}/>
+          <br />
+
+          <label>correoelectronico: </label>
+          <br />
+          <input type="text" className="form-control" name="correoelectronico" onChange={handleChange} value={gestorSeleccionado && gestorSeleccionado.correoelectronico}/>
+          <br />
+
+          <label>telefono: </label>
+          <br />
+          <input type="text" className="form-control" name="telefono" onChange={handleChange} value={gestorSeleccionado && gestorSeleccionado.telefono}/>
+          <br />
+
+          <label>Fax: </label>
+          <br />
+          <input type="text" className="form-control" name="Fax" onChange={handleChange} value={gestorSeleccionado && gestorSeleccionado.Fax}/>
+          <br />
+
+          <label>password: </label>
+          <br />
+          <input type="text" className="form-control" name="password" onChange={handleChange} value={gestorSeleccionado && gestorSeleccionado.password}/>
+          <br />
+        </div>
+      </ModalBody>
+      <ModalFooter>
+        <button className="btn btn-primary" onClick={()=>peticionPut()}>Editar</button>{"   "}
+        <button className="btn btn-danger" onClick={()=>abrirCerrarModalEditar()}>Cancelar</button>
+      </ModalFooter>
+    </Modal>
+
+
+    <Modal isOpen={modalEliminar}>
+        <ModalBody>
+        ¿Estás seguro que deseas eliminar el Gestor de Base de datos {gestorSeleccionado && gestorSeleccionado.perfil}?
+        </ModalBody>
+        <ModalFooter>
+          <button className="btn btn-danger" onClick={()=>peticionDelete()}>
+            Sí
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={()=>abrirCerrarModalEliminar()}
+          >
+            No
+          </button>
+        </ModalFooter>
+      </Modal>
+
+    </div>
+  );
+}
+export default App;
